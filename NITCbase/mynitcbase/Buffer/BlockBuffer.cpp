@@ -3,6 +3,11 @@
 #include <cstdlib>
 #include <cstring>
 
+//  Stage 2     :   BB(blockNum)
+                //  RB
+                //  getHeader
+                //  getRecord
+
 BlockBuffer::BlockBuffer(int blockNum) {
     this->blockNum = blockNum;
 }
