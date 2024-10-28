@@ -4,6 +4,10 @@
 #include <iostream>
 
 //    Stage 4   :   select_from_table_where
+
+//    Stage 5   :   open_table
+                //  close_table
+                
             
 
 int Frontend::create_table(char relname[ATTR_SIZE], int no_attrs, char attributes[][ATTR_SIZE],
@@ -19,12 +23,14 @@ int Frontend::drop_table(char relname[ATTR_SIZE]) {
 
 int Frontend::open_table(char relname[ATTR_SIZE]) {
   // Schema::openRel
-  return SUCCESS;
+  // return SUCCESS;
+  return Schema::openRel(relname);
 }
 
 int Frontend::close_table(char relname[ATTR_SIZE]) {
   // Schema::closeRel
-  return SUCCESS;
+  // return SUCCESS;
+  return Schema::closeRel(relname);
 }
 
 int Frontend::alter_table_rename(char relname_from[ATTR_SIZE], char relname_to[ATTR_SIZE]) {
