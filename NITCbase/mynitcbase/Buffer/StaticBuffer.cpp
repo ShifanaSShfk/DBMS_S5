@@ -1,12 +1,17 @@
 #include "StaticBuffer.h"
 
 
-//  STAGE 3     : 
+//  Stage 3     : 
         //    ||  declaration happens after Disk(); ||
                 //  StaticBuffer(),
                 //  ~StaticBuffer(),
                 //  getFreeBuffer(int blockNum),
                 //  getBufferNum(int blockNum)
+
+//  Stage 6     :   SB                              --  modified
+                //  ~SB                             --  modified
+                //  getFreeBuffer                   --  modified
+                //  setDirtyBit(int blockNum)
 
 
 // the declarations for this class can be found at "StaticBuffer.h"
@@ -16,9 +21,11 @@ struct BufferMetaInfo StaticBuffer::metainfo[BUFFER_CAPACITY];
 
 StaticBuffer::StaticBuffer() {
 
-    // initialise all blocks as free
-    for(int bufferIndex = 0; bufferIndex < BUFFER_CAPACITY; bufferIndex++){
-        metainfo[bufferIndex].free = true;
+    for (int i = 0; i < BUFFER_CAPACITY; i++) {
+        metainfo[i].free = true;
+        metainfo[i].dirty = false;
+        metainfo[i].timeStamp = -1;
+        metainfo[i].blockNum = -1;
     }
 }
 
@@ -27,14 +34,27 @@ At this stage, we are not writing back from the buffer to the disk since we are
 not modifying the buffer. So, we will define an empty destructor for now. In
 subsequent stages, we will implement the write-back functionality here.
 */
-StaticBuffer::~StaticBuffer() {}
+StaticBuffer::~StaticBuffer() {
+     for (int i = 0; i < BUFFER_CAPACITY; i++) {
+        if (!metainfo[i].free && metainfo[i].dirty) 
+            Disk::writeBlock(StaticBuffer::blocks[i], metainfo[i].blockNum);
+    }
+}
 
 int StaticBuffer::getFreeBuffer(int blockNum) {
 
     if (blockNum < 0 || blockNum > DISK_BLOCKS) {
         return E_OUTOFBOUND;
     }
-    int allocatedBuffer;
+    
+    // Increment the time stamp for all occupied buffers
+    for (int i = 0; i < BUFFER_CAPACITY; i++) {
+        if (!metainfo[i].free)
+            metainfo[i].timeStamp++; // Increment the time stamp for buffers that are in use
+    }
+
+    int allocatedBuffer = -1; // Initialize variable to store the index of the allocated buffer
+
 
     // iterate through all the blocks in the StaticBuffer
     for (int bufferIndex = 0; bufferIndex < BUFFER_CAPACITY; bufferIndex++) {
@@ -46,10 +66,29 @@ int StaticBuffer::getFreeBuffer(int blockNum) {
         }
     }
 
-    metainfo[allocatedBuffer].free = false;
-    metainfo[allocatedBuffer].blockNum = blockNum;
+    // If no free buffer was found, perform a replacement strategy
+    if (allocatedBuffer == -1) {
+        int highestTimeStamp = 0; // Variable to track the buffer with the highest time stamp
+        for (int i = 0; i < BUFFER_CAPACITY; i++) {
+            // Find the buffer that has been in use the longest (highest time stamp)
+            if (metainfo[i].timeStamp > highestTimeStamp) {
+                highestTimeStamp = metainfo[i].timeStamp;
+                allocatedBuffer = i; // Set the index of the buffer to be replaced
+            }
+        }
 
-    return allocatedBuffer;
+        // If the selected buffer is dirty (modified), write it back to disk
+        if (metainfo[allocatedBuffer].dirty)
+            Disk::writeBlock(StaticBuffer::blocks[allocatedBuffer], metainfo[allocatedBuffer].blockNum);
+    }
+
+    // Update the metadata for the allocated buffer
+    metainfo[allocatedBuffer].free = false;         // Mark the buffer as occupied
+    metainfo[allocatedBuffer].dirty = false;        // Reset the dirty flag
+    metainfo[allocatedBuffer].blockNum = blockNum;  // Set the block number for the buffer
+    metainfo[allocatedBuffer].timeStamp = 0;        // Reset the time stamp for the buffer
+
+    return allocatedBuffer; // Return the index of the allocated buffer
 }
 
 /* Get the buffer index where a particular block is stored
@@ -72,4 +111,29 @@ int StaticBuffer::getBufferNum(int blockNum) {
 
     // if block is not in the buffer
     return E_BLOCKNOTINBUFFER;
+}
+
+int StaticBuffer::setDirtyBit(int blockNum){
+    // find the buffer index corresponding to the block using getBufferNum().
+    int bufferNum = getBufferNum(blockNum);
+
+    // if block is not present in the buffer (bufferNum = E_BLOCKNOTINBUFFER)
+    //     return E_BLOCKNOTINBUFFER
+    if (bufferNum == E_BLOCKNOTINBUFFER) {
+        return E_BLOCKNOTINBUFFER;
+    }
+
+    // if blockNum is out of bound (bufferNum = E_OUTOFBOUND)
+    //     return E_OUTOFBOUND
+    if (bufferNum == E_OUTOFBOUND) {
+        return E_OUTOFBOUND;
+    }
+
+    // else
+    //     (the bufferNum is valid)
+    //     set the dirty bit of that buffer to true in metainfo
+    metainfo[bufferNum].dirty = true;
+
+    // return SUCCESS
+    return SUCCESS;
 }

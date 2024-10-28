@@ -7,7 +7,10 @@
 
 //    Stage 5   :   open_table
                 //  close_table
-                
+
+//    Stage 6   :   alter_table_rename
+                //  alter_table_rename_column                
+
             
 
 int Frontend::create_table(char relname[ATTR_SIZE], int no_attrs, char attributes[][ATTR_SIZE],
@@ -35,13 +38,15 @@ int Frontend::close_table(char relname[ATTR_SIZE]) {
 
 int Frontend::alter_table_rename(char relname_from[ATTR_SIZE], char relname_to[ATTR_SIZE]) {
   // Schema::renameRel
-  return SUCCESS;
+  // return SUCCESS;
+  return Schema::renameRel(relname_from, relname_to);
 }
 
 int Frontend::alter_table_rename_column(char relname[ATTR_SIZE], char attrname_from[ATTR_SIZE],
                                         char attrname_to[ATTR_SIZE]) {
   // Schema::renameAttr
-  return SUCCESS;
+  // return SUCCESS;
+  return Schema::renameAttr(relname, attrname_from, attrname_to);
 }
 
 int Frontend::create_index(char relname[ATTR_SIZE], char attrname[ATTR_SIZE]) {

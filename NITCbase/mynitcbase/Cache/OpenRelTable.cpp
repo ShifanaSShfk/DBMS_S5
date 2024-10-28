@@ -15,6 +15,7 @@
                     //  closeRel(int relId)
 
 OpenRelTableMetaInfo OpenRelTable::tableMetaInfo[MAX_OPEN];
+
 AttrCacheEntry* createList(int length) {
     AttrCacheEntry* head = (AttrCacheEntry*) malloc(sizeof(AttrCacheEntry));
     AttrCacheEntry* tail = head;
