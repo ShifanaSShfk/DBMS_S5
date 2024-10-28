@@ -18,6 +18,24 @@
                 //  RB::setRecord(union Attribute *rec, int slotNum), *************DK!!!*************FROM WHERE THIS CAME
                 //  BB::loadBlockAndGetBufferPtr(unsigned char **buffPtr)
 
+//  Stage 4     :   RB::getSlotMap(unsigned char* slotMap)
+
+
+#include <stdio.h>
+
+int compareAttrs(union Attribute attr1, union Attribute attr2, int attrType) {
+    int diff;
+    (attrType == NUMBER)
+        ? diff = attr1.nVal - attr2.nVal
+        : diff = strcmp(attr1.sVal, attr2.sVal);
+    if (diff > 0)
+        return 1; // attr1 > attr2
+    else if (diff < 0)
+        return -1; //attr 1 < attr2
+    else 
+        return 0;
+}
+
 BlockBuffer::BlockBuffer(int blockNum) {
     this->blockNum = blockNum;
 }
@@ -139,3 +157,25 @@ int BlockBuffer::loadBlockAndGetBufferPtr(unsigned char **buffPtr) {
 
   return SUCCESS;
 }
+
+int RecBuffer::getSlotMap(unsigned char* slotMap) {
+    unsigned char* bufferPtr;
+
+    int ret = loadBlockAndGetBufferPtr(&bufferPtr);
+
+    if (ret != SUCCESS)
+        return ret;
+
+    struct HeadInfo head;
+    getHeader(&head);
+
+    int slotCount = head.numSlots;
+
+    unsigned char* slotMapInBuffer = bufferPtr + HEADER_SIZE;
+
+    memcpy(slotMap, slotMapInBuffer, slotCount);
+
+    return SUCCESS;
+
+}
+
