@@ -13,6 +13,10 @@
 //    Stage 8   :   create_table
                 //  drop_table
 
+//    Stage 9   :   select_from_table
+                //  select_attrlist_from_table
+                //  select_from_table_where
+                //  select_attrlist_from_table_where
                 
             
 #include "Frontend.h"
@@ -71,13 +75,15 @@ int Frontend::insert_into_table_values(char relname[ATTR_SIZE], int attr_count, 
 
 int Frontend::select_from_table(char relname_source[ATTR_SIZE], char relname_target[ATTR_SIZE]) {
   // Algebra::project
-  return SUCCESS;
+  // return SUCCESS;
+  return Algebra::project(relname_source,relname_target);
 }
 
 int Frontend::select_attrlist_from_table(char relname_source[ATTR_SIZE], char relname_target[ATTR_SIZE],
                                          int attr_count, char attr_list[][ATTR_SIZE]) {
   // Algebra::project
-  return SUCCESS;
+  // return SUCCESS;
+  return Algebra::project(relname_source,relname_target,attr_count,attr_list);
 }
 
 int Frontend::select_from_table_where(char relname_source[ATTR_SIZE], char relname_target[ATTR_SIZE],
@@ -90,7 +96,27 @@ int Frontend::select_attrlist_from_table_where(char relname_source[ATTR_SIZE], c
                                                int attr_count, char attr_list[][ATTR_SIZE],
                                                char attribute[ATTR_SIZE], int op, char value[ATTR_SIZE]) {
   // Algebra::select + Algebra::project??
-  return SUCCESS;
+  // return SUCCESS;
+  int ret = Algebra::select(relname_source,TEMP,attribute,op,value);
+
+
+  if(ret != SUCCESS) return ret;
+
+
+  ret = OpenRelTable::openRel(TEMP);
+
+
+  if(ret < 0 || ret >= MAX_OPEN){
+    Schema::deleteRel(TEMP);
+    return ret;
+  }
+
+  ret = Algebra::project(TEMP,relname_target,attr_count,attr_list);
+
+  Schema::closeRel(TEMP);
+  Schema::deleteRel(TEMP);
+
+  return ret;
 }
 
 int Frontend::select_from_join_where(char relname_source_one[ATTR_SIZE], char relname_source_two[ATTR_SIZE],
