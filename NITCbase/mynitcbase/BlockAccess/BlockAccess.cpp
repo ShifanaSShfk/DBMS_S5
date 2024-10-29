@@ -346,6 +346,7 @@ int BlockAccess::insert(int relId,union Attribute* record){
         // get header of block(blockNum) using RecBuffer::getHeader() function
         
         blockBuffer.getHeader(&head);
+        //std::cout<<head.rblock;
 
         // get slot map of block(blockNum) using RecBuffer::getSlotMap() function
         unsigned char slotMap[head.numSlots];
@@ -426,7 +427,8 @@ int BlockAccess::insert(int relId,union Attribute* record){
         head.pblock = head.rblock = -1;
         head.lblock = prevBlockNum;
         head.numEntries = 0;
-        head.numAttrs = numOfAttributes,head.numSlots = numOfSlots;
+        head.numAttrs = numOfAttributes;
+        head.numSlots = numOfSlots;
 
         blockBuffer.setHeader(&head);
 
