@@ -1,5 +1,6 @@
 #include "StaticBuffer.h"
 
+#include <cstring>
 
 //  Stage 3     : 
         //    ||  declaration happens after Disk(); ||
@@ -8,25 +9,42 @@
                 //  getFreeBuffer(int blockNum),
                 //  getBufferNum(int blockNum)
 
+
 //  Stage 6     :   SB                              --  modified
                 //  ~SB                             --  modified
                 //  getFreeBuffer                   --  modified
                 //  setDirtyBit(int blockNum)
 
 
-// the declarations for this class can be found at "StaticBuffer.h"
+//  Stage 7     :   SB                              --  modified
+                //  ~SB                             --  modified
+                
 
+
+// the declarations for this class can be found at "StaticBuffer.h"
 unsigned char StaticBuffer::blocks[BUFFER_CAPACITY][BLOCK_SIZE];
 struct BufferMetaInfo StaticBuffer::metainfo[BUFFER_CAPACITY];
+// declare the blockAllocMap array
+unsigned char StaticBuffer::blockAllocMap[DISK_BLOCKS];
 
+/*
+TODO:: write block allocation map from block 0-3 to block allocation map*/
 StaticBuffer::StaticBuffer() {
-
-    for (int i = 0; i < BUFFER_CAPACITY; i++) {
-        metainfo[i].free = true;
-        metainfo[i].dirty = false;
-        metainfo[i].timeStamp = -1;
-        metainfo[i].blockNum = -1;
+  // initialise all blocks as free
+  for (int i = 0, blockMapslot = 0; i < 4; i++) {
+    unsigned char buffer[BLOCK_SIZE];
+    Disk::readBlock(buffer, i);
+    for (int slot = 0; slot < BLOCK_SIZE; slot++, blockMapslot++) {
+      StaticBuffer::blockAllocMap[blockMapslot] = buffer[slot];
     }
+  }
+
+  for (int bufferIndex = 0; bufferIndex < BUFFER_CAPACITY; bufferIndex++) {
+    metainfo[bufferIndex].free = true;
+    metainfo[bufferIndex].dirty = false;
+    metainfo[bufferIndex].blockNum = -1;
+    metainfo[bufferIndex].timeStamp = -1;
+  }
 }
 
 /*
@@ -34,11 +52,24 @@ At this stage, we are not writing back from the buffer to the disk since we are
 not modifying the buffer. So, we will define an empty destructor for now. In
 subsequent stages, we will implement the write-back functionality here.
 */
+
+/* 
+TODO::writing back to block allocation map*/
 StaticBuffer::~StaticBuffer() {
-     for (int i = 0; i < BUFFER_CAPACITY; i++) {
-        if (!metainfo[i].free && metainfo[i].dirty) 
-            Disk::writeBlock(StaticBuffer::blocks[i], metainfo[i].blockNum);
+  for (int i = 0, blockMapslot = 0; i < 4; i++) {
+    unsigned char buffer[BLOCK_SIZE];
+    for (int slot = 0; slot < BLOCK_SIZE; slot++, blockMapslot++) {
+      buffer[slot] = blockAllocMap[blockMapslot];
     }
+    Disk::writeBlock(buffer, i);
+  }
+
+  for (int bufferIndex = 0; bufferIndex < BUFFER_CAPACITY; bufferIndex++) {
+    if (metainfo[bufferIndex].free == false and
+        metainfo[bufferIndex].dirty == true) {
+      Disk::writeBlock(blocks[bufferIndex], metainfo[bufferIndex].blockNum);
+    }
+  }
 }
 
 int StaticBuffer::getFreeBuffer(int blockNum) {
