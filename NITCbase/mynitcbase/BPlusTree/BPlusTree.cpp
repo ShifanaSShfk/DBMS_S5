@@ -6,7 +6,7 @@
 
 int BPlusTree::numOfComparisons;
 
-/** 
+/* 
  * @brief 
  * searches the relation specified to find the next record that satisfies the specified condition
  * 
