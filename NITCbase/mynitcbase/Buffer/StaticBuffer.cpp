@@ -15,7 +15,9 @@
 
 //  Stage 7     :   SB                              --  modified
                 //  ~SB                             --  modified
-                
+
+
+//  Stage 10    :   getStaticBlockType()
 
 #include "StaticBuffer.h"
 
@@ -161,3 +163,23 @@ int StaticBuffer::getBufferNum(int blockNum){
 
     return E_BLOCKNOTINBUFFER;
 }
+
+// int StaticBuffer::getStaticBlockType(int blockNum) {
+//     if (blockNum < 0 || blockNum >= DISK_BLOCKS)
+//         return E_OUTOFBOUND;
+
+//     unsigned char blockType = blockAllocMap[blockNum];
+
+//     return (int)blockType;
+// }
+
+// Returns the block type of the block corresponding to the input block number
+// This function is used to find the block type without the creation of a block object
+int StaticBuffer::getStaticBlockType(int blockNum){
+  // Check if blockNum is valid (non zero and less than number of disk blocks)
+  if (blockNum < 0 || blockNum > DISK_BLOCKS) return E_OUTOFBOUND;
+
+  // Access the entry in block allocation map corresponding to the blockNum argument
+  return (int)blockAllocMap[blockNum];
+}
+

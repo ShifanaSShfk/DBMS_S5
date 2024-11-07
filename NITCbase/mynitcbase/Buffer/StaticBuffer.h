@@ -4,6 +4,9 @@
 #include "../Disk_Class/Disk.h"
 #include "../define/constants.h"
 
+
+//  Stage 10    :   variable to store the number of comparisons done
+
 struct BufferMetaInfo {
   bool free;
   bool dirty;
@@ -30,6 +33,8 @@ class StaticBuffer {
   static int setDirtyBit(int blockNum);
   StaticBuffer();
   ~StaticBuffer();
+
+  //static int numCompares;   
 };
 
 #endif  // NITCBASE_STATICBUFFER_H

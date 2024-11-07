@@ -27,6 +27,16 @@
                 //  RB::setSlotMap(unsigned char* slotMap)
                 //  BB::getBlockNum()
 
+//  Stage 10    :   IB  C1
+                //  IB  C2
+                //  II  C1
+                //  II  C2
+                //  IL  C1
+                //  IL  C2
+                //  II:: getEntry, setEntry
+                //  IL:: getEntry, setEntry
+                
+
 #include "BlockBuffer.h"
 
 #include <cstdlib>
@@ -419,22 +429,22 @@ int RecBuffer::setSlotMap(unsigned char *slotMap){
 
 }
 
-int compareAttrs(Attribute attr1, Attribute attr2, int attrType){
+// int compareAttrs(Attribute attr1, Attribute attr2, int attrType){
 
-    double diff;
+//     double diff;
 
 
-    if(attrType == STRING){
-        diff = strcmp(attr1.sVal,attr2.sVal);
-    }else{
-        diff = attr1.nVal - attr2.nVal;
-    }
+//     if(attrType == STRING){
+//         diff = strcmp(attr1.sVal,attr2.sVal);
+//     }else{
+//         diff = attr1.nVal - attr2.nVal;
+//     }
 
-    if(diff > 0) return 1;
-    else if(diff < 0) return -1;
-    else return 0;
+//     if(diff > 0) return 1;
+//     else if(diff < 0) return -1;
+//     else return 0;
     
-}
+// }
 
 void BlockBuffer::releaseBlock(){
     
@@ -465,3 +475,96 @@ void BlockBuffer::releaseBlock(){
     // set the object's blockNum to INVALID_BLOCK (-1)
     this->blockNum = -1;
 }
+
+// New Block
+IndBuffer::IndBuffer(char blockType) : BlockBuffer(blockType){}
+
+// Load Block
+IndBuffer::IndBuffer(int blockNum) : BlockBuffer(blockNum){}
+
+// New Block
+IndInternal::IndInternal() : IndBuffer('I'){}
+
+// Load Block
+IndInternal::IndInternal(int blockNum) : IndBuffer(blockNum){}
+
+// New Block
+IndLeaf::IndLeaf() : IndBuffer('L'){}
+
+// Load Block
+IndLeaf::IndLeaf(int blockNum) : IndBuffer(blockNum){}
+
+int IndInternal::getEntry(void *ptr, int indexNum) {
+  if ( indexNum < 0 || indexNum >= MAX_KEYS_INTERNAL ) return E_OUTOFBOUND;
+
+  unsigned char *bufferPtr;
+  int ret = loadBlockAndGetBufferPtr(&bufferPtr);
+  if ( ret != SUCCESS ) return ret;
+  
+  // typecast the void pointer to an internal entry pointer
+  struct InternalEntry *internalEntry = (struct InternalEntry *)ptr;
+
+  /*
+  - copy the entries from the indexNum`th entry to *internalEntry
+  - make sure that each field is copied individually as in the following code
+  - the lChild and rChild fields of InternalEntry are of type int32_t
+  - int32_t is a type of int that is guaranteed to be 4 bytes across every
+    C++ implementation. sizeof(int32_t) = 4
+  */
+
+  /* the indexNum'th entry will begin at an offset of
+      HEADER_SIZE + (indexNum * (sizeof(int) + ATTR_SIZE) )
+      where sizeof(int) -> Child pointer size
+      ATTR_SIZE -> Record Pointer size
+      from bufferPtr */
+  unsigned char *entryPtr = bufferPtr + HEADER_SIZE + (indexNum * 20);
+
+  memcpy(&(internalEntry->lChild), entryPtr, sizeof(int32_t));
+  memcpy(&(internalEntry->attrVal), entryPtr + 4, sizeof(Attribute));
+  memcpy(&(internalEntry->rChild), entryPtr + 20, 4);
+
+  return SUCCESS;
+}
+
+int IndLeaf::getEntry(void *ptr, int indexNum) {
+
+  if ( indexNum < 0 || indexNum >= MAX_KEYS_INTERNAL ) return E_OUTOFBOUND;
+
+  unsigned char *bufferPtr;
+  int ret = loadBlockAndGetBufferPtr(&bufferPtr);
+  if ( ret != SUCCESS ) return ret;
+
+  /* the indexNum'th entry will begin at an offset of
+      HEADER_SIZE + (indexNum * LEAF_ENTRY_SIZE)  from bufferPtr */
+  unsigned char *entryPtr = bufferPtr + HEADER_SIZE + (indexNum * LEAF_ENTRY_SIZE);
+
+  // copy the indexNum'th Index entry in buffer to memory ptr using memcpy
+  memcpy((struct Index *)ptr, entryPtr, LEAF_ENTRY_SIZE);
+
+  return SUCCESS;
+}
+
+// NOT IMPLEMENTED
+int IndInternal::setEntry(void *ptr, int indexNum) {
+  return 0;
+}
+
+// NOT IMPLEMENTED
+int IndLeaf::setEntry(void *ptr, int indexNum) {
+  return 0;
+}
+
+// Used to perform operations and comparisons in SQL queries
+int compareAttrs(union Attribute attr1, union Attribute attr2, int attrType) {
+
+    double diff;
+    if (attrType == STRING)
+        diff = strcmp(attr1.sVal, attr2.sVal);
+    else
+        diff = attr1.nVal - attr2.nVal;
+
+    if (diff > 0) return 1;
+    else if (diff < 0) return -1;
+    else return 0;
+}
+

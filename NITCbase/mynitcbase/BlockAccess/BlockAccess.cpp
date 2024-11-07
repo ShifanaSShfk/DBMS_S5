@@ -9,6 +9,8 @@
 
 //      Stage 9     :   project(int relId, Attribute *record)
 
+//      Stage 10    :   search          -- modified for b+s
+
 
 #include "BlockAccess.h"
 
@@ -524,30 +526,38 @@ NOTE: This function will copy the result of the search to the `record` argument.
       based on the number of attributes in the relation.
 */
 
-int BlockAccess::search(int relId, Attribute *record, char attrName[ATTR_SIZE], Attribute attrVal, int op) {
-    // Declare a variable called recid to store the searched record
-    RecId recId;
+int BlockAccess::search(  int relId, 
+                          Attribute *record, 
+                          char attrName[ATTR_SIZE], 
+                          Attribute attrVal, 
+                          int op ) {
 
-    /* search for the record id (recid) corresponding to the attribute with
-    attribute name attrName, with value attrval and satisfying the condition op
-    using linearSearch() */
+  RecId recId;
+  
+  AttrCatEntry attrCatEntry;
+  int ret = AttrCacheTable::getAttrCatEntry(relId, attrName, &attrCatEntry);
+  if ( ret != SUCCESS ) return ret;
 
-    recId = linearSearch(relId,attrName,attrVal,op);
+  // Linear search if no root block mentioned
+  if ( attrCatEntry.rootBlock == -1 ) {
+    recId = linearSearch(relId, attrName, attrVal, op);
+  }
+  // Index exists for this attribute
+  else {
+    recId = BPlusTree::bPlusSearch(relId, attrName, attrVal, op);
+  }
 
-    // if there's no record satisfying the given condition (recId = {-1, -1})
-    //    return E_NOTFOUND;
-    if(recId.block == -1 && recId.slot == -1)return E_NOTFOUND;
+  // No record found
+  if ( recId.slot == -1 && recId.block == -1 )
+    return E_NOTFOUND;
 
-    /* Copy the record with record id (recId) to the record buffer (record)
-       For this Instantiate a RecBuffer class object using recId and
-       call the appropriate method to fetch the record
-    */
-    RecBuffer blockBuffer(recId.block);
+  //Fetch the required record
+  RecBuffer block(recId.block);
+  block.getRecord(record, recId.slot);
 
-    int ret = blockBuffer.getRecord(record,recId.slot);
-
-    return ret;
+  return SUCCESS;
 }
+
 
 int BlockAccess::deleteRelation(char relName[ATTR_SIZE]) {
 
@@ -783,6 +793,7 @@ NOTE: the caller is expected to allocate space for the argument `record` based
       on the size of the relation. This function will only copy the result of
       the projection onto the array pointed to by the argument.
 */
+
 int BlockAccess::project(int relId, Attribute *record) {
     // get the previous search index of the relation relId from the relation
     // cache (use RelCacheTable::getSearchIndex() function)
@@ -880,3 +891,4 @@ int BlockAccess::project(int relId, Attribute *record) {
     
     return SUCCESS;
 }
+
