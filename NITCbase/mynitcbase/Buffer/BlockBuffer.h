@@ -92,4 +92,7 @@ class IndLeaf : public IndBuffer {
   int setEntry(void *ptr, int indexNum);
 };
 
+// s11
+// void printBuffer (int blockNum, unsigned char block []);
+
 #endif  // NITCBASE_BLOCKBUFFER_H

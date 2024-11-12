@@ -13,6 +13,9 @@
 
 //      Stage 7     :   closeRel    -- modified
 
+//      Stage 11    :   closeRel    -- modified
+
+
 #include "OpenRelTable.h"
 
 #include <cstring>
@@ -26,7 +29,8 @@ OpenRelTableMetaInfo OpenRelTable::tableMetaInfo[MAX_OPEN];
 
 
 OpenRelTable::OpenRelTable(){
-    // initialize relCache and attrCache with nullptr
+    // initialise all values in relCache and attrCache to be nullptr and all entries
+    // in tableMetaInfo to be free
     for(int i=0;i < MAX_OPEN; i++){
         RelCacheTable::relCache[i] = nullptr;
         AttrCacheTable::attrCache[i] = nullptr;
@@ -371,6 +375,7 @@ int OpenRelTable::closeRel(int relId){
         return E_RELNOTOPEN;
     }
 
+
     /****** Releasing the Relation Cache entry of the relation ******/
 
     if (RelCacheTable::relCache[relId]->dirty){
@@ -379,7 +384,6 @@ int OpenRelTable::closeRel(int relId){
         Then convert it to a record using RelCacheTable::relCatEntryToRecord(). */
 
         Attribute rec[RELCAT_NO_ATTRS];
-
         RelCacheTable::relCatEntryToRecord(&(RelCacheTable::relCache[relId]->relCatEntry),rec);
 
         // declaring an object of RecBuffer class to write back to the buffer
@@ -395,8 +399,29 @@ int OpenRelTable::closeRel(int relId){
 
     /****** Releasing the Attribute Cache entry of the relation ******/
 
+    // delete RelCacheTable::relCache[relId];
+    // freeAttrCacheEntry(AttrCacheTable::attrCache[relId]);
+
+    // AttrCacheTable::attrCache[relId] = nullptr;
+    // RelCacheTable::relCache[relId] = nullptr;
+    
+    // tableMetaInfo[relId].free = true;
+
+    // return SUCCESS;
+
     delete RelCacheTable::relCache[relId];
-    freeAttrCacheEntry(AttrCacheTable::attrCache[relId]);
+    AttrCacheEntry* temp = nullptr;
+
+    for(auto entry=AttrCacheTable::attrCache[relId];entry!=nullptr;entry = temp){
+        if(entry->dirty){
+            Attribute record[ATTRCAT_NO_ATTRS];
+            AttrCacheTable::attrCatEntryToRecord(&(entry->attrCatEntry),record);
+            RecBuffer recBuffer(entry->recId.block);
+            recBuffer.setRecord(record,entry->recId.slot);
+        }
+        temp = entry->next;
+        delete entry;
+    }
 
     AttrCacheTable::attrCache[relId] = nullptr;
     RelCacheTable::relCache[relId] = nullptr;
@@ -405,74 +430,130 @@ int OpenRelTable::closeRel(int relId){
 
     return SUCCESS;
 
-
 }
+//     /****** Updating metadata in the Open Relation Table of the relation  ******/
 
+//   //free the relIdth entry of the tableMetaInfo.
+//   tableMetaInfo[relId].free = true;
+//   strcpy(tableMetaInfo[relId].relName, "");
+//   RelCacheTable::relCache[relId] = nullptr;
+//   AttrCacheTable::attrCache[relId] = nullptr;
+//   return SUCCESS;
+// }
+
+
+// OpenRelTable::~OpenRelTable() {
+//     // free all the memory that you allocated in the constructor
+
+//     // close all open relations (from rel-id = 2 onwards. Why?)
+
+//     for (int i = 2; i < MAX_OPEN; ++i) {
+//         if (!tableMetaInfo[i].free) {
+//             closeRel(i); // we will implement this function later
+//         }
+//     }
+
+//     /**** Closing the catalog relations in the relation cache ****/
+
+//     //releasing the relation cache entry of the attribute catalog
+
+//     RelCacheEntry RelCacheEntry;
+
+//     if (RelCacheTable::relCache[ATTRCAT_RELID]->dirty) {
+
+//         /* Get the Relation Catalog entry from RelCacheTable::relCache
+//         Then convert it to a record using RelCacheTable::relCatEntryToRecord(). */
+
+//         Attribute rec[RELCAT_NO_ATTRS];
+//         RelCacheTable::relCatEntryToRecord(&(RelCacheTable::relCache[ATTRCAT_RELID]->relCatEntry),rec);
+
+//         // declaring an object of RecBuffer class to write back to the buffer
+
+//         RecId recId = RelCacheTable::relCache[ATTRCAT_RELID]->recId;
+//         RecBuffer relCatBlock(recId.block);
+
+//         // Write back to the buffer using relCatBlock.setRecord() with recId.slot
+//         relCatBlock.setRecord(rec,recId.slot);
+
+//     }
+
+//     //releasing the relation cache entry of the relation catalog
+
+//     if(RelCacheTable::relCache[RELCAT_RELID]->dirty) {
+
+//         /* Get the Relation Catalog entry from RelCacheTable::relCache
+//         Then convert it to a record using RelCacheTable::relCatEntryToRecord(). */
+
+//         Attribute rec[RELCAT_NO_ATTRS];
+//         RelCacheTable::relCatEntryToRecord(&(RelCacheTable::relCache[RELCAT_RELID]->relCatEntry),rec);
+
+//         // declaring an object of RecBuffer class to write back to the buffer
+//         RecId recId = RelCacheTable::relCache[RELCAT_RELID]->recId;
+//         RecBuffer relCatBlock(recId.block);
+
+//         // Write back to the buffer using relCatBlock.setRecord() with recId.slot
+//         relCatBlock.setRecord(rec,recId.slot);
+//     }
+    
+//     // free the memory dynamically allocated to this RelCacheEntry
+    
+//     //here we free all the elements from the relcache array
+//     for(int relCacheIdx=0;relCacheIdx<MAX_OPEN;relCacheIdx++){
+//         if(RelCacheTable::relCache[relCacheIdx]!=nullptr) delete RelCacheTable::relCache[relCacheIdx];
+        
+//     }
+
+//     // here we recursively free all allocated memory as it is of linked list type and we have to traverse the whole list to free the the list
+//     // using the freeAttrCacheEntry function
+//     for(int attrCacheIdx=0;attrCacheIdx<MAX_OPEN;attrCacheIdx++) freeAttrCacheEntry(AttrCacheTable::attrCache[attrCacheIdx]);
+
+    
+// }
 
 OpenRelTable::~OpenRelTable() {
-    // free all the memory that you allocated in the constructor
 
-    // close all open relations (from rel-id = 2 onwards. Why?)
-
-    for (int i = 2; i < MAX_OPEN; ++i) {
-        if (!tableMetaInfo[i].free) {
-            closeRel(i); // we will implement this function later
-        }
+  // close all open relations from rel-id = 2 onwards.
+  for (int i = 2; i < MAX_OPEN; ++i) {
+    if (!tableMetaInfo[i].free) {
+      OpenRelTable::closeRel(i);
     }
+  }
 
-    /**** Closing the catalog relations in the relation cache ****/
+  /**** Closing the catalog relations in the relation cache ****/
 
-    //releasing the relation cache entry of the attribute catalog
+  //releasing the relation cache entry of the attribute catalog
+  if ( RelCacheTable::relCache[ATTRCAT_RELID]->dirty == true ) {
 
-    RelCacheEntry RelCacheEntry;
+    Attribute attrCatInRelCatRecord[RELCAT_NO_ATTRS];
+    RelCacheTable::relCatEntryToRecord(&RelCacheTable::relCache[ATTRCAT_RELID]->relCatEntry,
+                                        attrCatInRelCatRecord);
 
-    if (RelCacheTable::relCache[ATTRCAT_RELID]->dirty) {
+    // declaring an object of RecBuffer class to write back to the buffer
+    RecId recId = RelCacheTable::relCache[ATTRCAT_RELID]->recId;
 
-        /* Get the Relation Catalog entry from RelCacheTable::relCache
-        Then convert it to a record using RelCacheTable::relCatEntryToRecord(). */
+    // Writing the record back to the block
+    RecBuffer relCatBlock(recId.block);
+    relCatBlock.setRecord(attrCatInRelCatRecord, recId.slot);
+  }
+  // free the memory dynamically allocated to this RelCacheEntry
+  free(RelCacheTable::relCache[ATTRCAT_RELID]);
+  //releasing the relation cache entry of the relation catalog
+  if( RelCacheTable::relCache[RELCAT_RELID]->dirty == true ) {
 
-        Attribute rec[RELCAT_NO_ATTRS];
-        RelCacheTable::relCatEntryToRecord(&(RelCacheTable::relCache[ATTRCAT_RELID]->relCatEntry),rec);
+    Attribute relCatInRelCatRecord[RELCAT_NO_ATTRS];
+    RelCacheTable::relCatEntryToRecord(&RelCacheTable::relCache[RELCAT_RELID]->relCatEntry,
+                                        relCatInRelCatRecord);
 
-        // declaring an object of RecBuffer class to write back to the buffer
+    RecId recId = RelCacheTable::relCache[RELCAT_RELID]->recId;
+    // declaring an object of RecBuffer class to write back to the buffer
+    RecBuffer relCatBlock(recId.block);
 
-        RecId recId = RelCacheTable::relCache[ATTRCAT_RELID]->recId;
-        RecBuffer relCatBlock(recId.block);
+    // Write back to the buffer using relCatBlock.setRecord() with recId.slot
+    relCatBlock.setRecord(relCatInRelCatRecord, recId.slot);
+  }
+  // free the memory dynamically allocated for this RelCacheEntry
+  free(RelCacheTable::relCache[RELCAT_RELID]);
 
-        // Write back to the buffer using relCatBlock.setRecord() with recId.slot
-        relCatBlock.setRecord(rec,recId.slot);
-
-    }
-
-    //releasing the relation cache entry of the relation catalog
-
-    if(RelCacheTable::relCache[RELCAT_RELID]->dirty) {
-
-        /* Get the Relation Catalog entry from RelCacheTable::relCache
-        Then convert it to a record using RelCacheTable::relCatEntryToRecord(). */
-
-        Attribute rec[RELCAT_NO_ATTRS];
-        RelCacheTable::relCatEntryToRecord(&(RelCacheTable::relCache[RELCAT_RELID]->relCatEntry),rec);
-
-        // declaring an object of RecBuffer class to write back to the buffer
-        RecId recId = RelCacheTable::relCache[RELCAT_RELID]->recId;
-        RecBuffer relCatBlock(recId.block);
-
-        // Write back to the buffer using relCatBlock.setRecord() with recId.slot
-        relCatBlock.setRecord(rec,recId.slot);
-    }
-    
-    // free the memory dynamically allocated to this RelCacheEntry
-    
-    //here we free all the elements from the relcache array
-    for(int relCacheIdx=0;relCacheIdx<MAX_OPEN;relCacheIdx++){
-        if(RelCacheTable::relCache[relCacheIdx]!=nullptr) delete RelCacheTable::relCache[relCacheIdx];
-        
-    }
-
-    // here we recursively free all allocated memory as it is of linked list type and we have to traverse the whole list to free the the list
-    // using the freeAttrCacheEntry function
-    for(int attrCacheIdx=0;attrCacheIdx<MAX_OPEN;attrCacheIdx++) freeAttrCacheEntry(AttrCacheTable::attrCache[attrCacheIdx]);
-
-    
+  // free the memory allocated for the attribute cache entries of the
+  // relation catalog and the attribute catalog ??
 }
