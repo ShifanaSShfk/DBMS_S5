@@ -118,13 +118,16 @@ OpenRelTable::OpenRelTable() {
 
 
 OpenRelTable::~OpenRelTable() {
+    // close all open relations
     for (int i = 2; i < MAX_OPEN; i++) {
-        if (!tableMetaInfo[i].free)
+        if (!tableMetaInfo[i].free){
             OpenRelTable::closeRel(i);
+        }
+        // we will implement this function later
     }
 
 
-
+    // free the memory allocated for rel-id 0 and 1 in the caches
     for (int i = 0; i < MAX_OPEN; i++) {
         free(RelCacheTable::relCache[i]);
         clearList(AttrCacheTable::attrCache[i]);
@@ -141,20 +144,27 @@ will just hardcode it. In subsequent stages, we will loop through all the relati
 and open the appropriate one.
 */
 int OpenRelTable::getRelId(char relName[ATTR_SIZE]) {
+     /* traverse through the tableMetaInfo array,
+    find the entry in the Open Relation Table corresponding to relName.*/
     for (int i = 0; i < MAX_OPEN; i++) {
-        if (!tableMetaInfo[i].free && strcmp(relName, tableMetaInfo[i].relName) == 0)
+        if (!tableMetaInfo[i].free && strcmp(relName, tableMetaInfo[i].relName) == 0){
             return i;
+        }
     }
 
+    // if found return the relation id, else indicate that the relation do not
+    // have an entry in the Open Relation Table.
     return E_RELNOTOPEN;
 }
 
 int OpenRelTable::getFreeOpenRelTableEntry() {
+    /* traverse through the tableMetaInfo array,
+    find a free entry in the Open Relation Table.*/
     for (int i = 2; i < MAX_OPEN; i++) {
         if (tableMetaInfo[i].free)
             return i;
     }
-
+    // if found return the relation id, else return E_CACHEFULL.
     return E_CACHEFULL;
 }
 
